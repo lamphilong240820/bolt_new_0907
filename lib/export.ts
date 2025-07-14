@@ -1,13 +1,4 @@
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-// Extend jsPDF type to include autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
-
+// Export utilities for admin dashboard
 export interface ExportData {
   headers: string[];
   rows: (string | number)[][];
@@ -16,6 +7,8 @@ export interface ExportData {
 }
 
 export const exportToCSV = (data: ExportData) => {
+  if (typeof window === 'undefined') return;
+  
   const csvContent = [
     data.headers.join(','),
     ...data.rows.map(row => row.map(cell => `"${cell}"`).join(','))
@@ -34,37 +27,48 @@ export const exportToCSV = (data: ExportData) => {
   document.body.removeChild(link);
 };
 
-export const exportToPDF = (data: ExportData) => {
-  const doc = new jsPDF();
+export const exportToPDF = async (data: ExportData) => {
+  if (typeof window === 'undefined') return;
   
-  // Add title
-  doc.setFontSize(20);
-  doc.text(data.title, 14, 22);
-  
-  // Add timestamp
-  doc.setFontSize(10);
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
-  
-  // Add table
-  doc.autoTable({
-    head: [data.headers],
-    body: data.rows,
-    startY: 40,
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-    },
-    headStyles: {
-      fillColor: [59, 130, 246],
-      textColor: 255,
-      fontStyle: 'bold',
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252],
-    },
-  });
-  
-  doc.save(`${data.filename}.pdf`);
+  try {
+    const jsPDF = (await import('jspdf')).default;
+    await import('jspdf-autotable');
+    
+    const doc = new jsPDF();
+    
+    // Add title
+    doc.setFontSize(20);
+    doc.text(data.title, 14, 22);
+    
+    // Add timestamp
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+    
+    // Add table
+    (doc as any).autoTable({
+      head: [data.headers],
+      body: data.rows,
+      startY: 40,
+      styles: {
+        fontSize: 8,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [59, 130, 246],
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+    });
+    
+    doc.save(`${data.filename}.pdf`);
+  } catch (error) {
+    console.error('PDF export failed:', error);
+    // Fallback to CSV export
+    exportToCSV(data);
+  }
 };
 
 export const formatDataForExport = {

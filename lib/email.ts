@@ -1,16 +1,4 @@
-import nodemailer from 'nodemailer';
-
-// Create transporter using Docker MailHog
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'localhost',
-  port: parseInt(process.env.SMTP_PORT || '1025'),
-  secure: false, // MailHog doesn't use SSL
-  auth: process.env.SMTP_USER ? {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  } : undefined,
-});
-
+// Email utilities for the application
 export interface EmailOptions {
   to: string;
   subject: string;
@@ -19,7 +7,25 @@ export interface EmailOptions {
 }
 
 export async function sendEmail({ to, subject, html, text }: EmailOptions) {
+  // Only import nodemailer on server side
+  if (typeof window !== 'undefined') {
+    throw new Error('Email can only be sent from server side');
+  }
+
   try {
+    const nodemailer = await import('nodemailer');
+    
+    // Create transporter using Docker MailHog
+    const transporter = nodemailer.createTransporter({
+      host: process.env.SMTP_HOST || 'localhost',
+      port: parseInt(process.env.SMTP_PORT || '1025'),
+      secure: false, // MailHog doesn't use SSL
+      auth: process.env.SMTP_USER ? {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD,
+      } : undefined,
+    });
+
     const info = await transporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@shopflow.com',
       to,

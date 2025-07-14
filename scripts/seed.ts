@@ -1,10 +1,12 @@
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seed...');
+
+  // Dynamic import for bcryptjs to avoid build issues
+  const bcrypt = await import('bcryptjs');
 
   // Create admin user
   const hashedPassword = await bcrypt.hash('admin123', 12);

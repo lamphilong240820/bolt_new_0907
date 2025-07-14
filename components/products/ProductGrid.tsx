@@ -221,9 +221,9 @@ export default function ProductGrid({ products, loading, viewMode }: ProductGrid
             )}
 
             <Button
-              className="w-full bg-white text-gray-900 hover:bg-gray-100 border border-gray-200 shadow-sm"
+              variant="ghost"
               size="icon"
-              className="absolute top-3 right-3 w-8 h-8 bg-white/80 hover:bg-white text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+              className="absolute top-3 right-3 w-8 h-8 bg-white/80 hover:bg-white text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all border border-gray-200 shadow-sm"
             >
               <Heart className="w-4 h-4" />
             </Button>
