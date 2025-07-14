@@ -168,7 +168,7 @@ export default function Header() {
             {/* Mobile Search */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden hover:scale-110 transition-transform duration-300">
+                <Button variant="ghost" size="icon" className="md:hidden hover:scale-110 transition-transform duration-300 border-gray-300 hover:bg-gray-100">
                   <Search className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
@@ -198,7 +198,7 @@ export default function Header() {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="relative group hover:scale-110 transition-all duration-300 border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800 dark:text-gray-200"
+                  className="relative group hover:scale-110 transition-all duration-300"
                 >
                   <ShoppingCart className="w-5 h-5 group-hover:animate-bounce" />
                   {cartCount > 0 && (
@@ -220,7 +220,7 @@ export default function Header() {
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline" 
-                    className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 group border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
+                    className="flex items-center space-x-2 hover:scale-105 transition-all duration-300 group"
                   >
                     <div className="w-8 h-8 bg-gradient-to-br from-gray-200 to-gray-300 rounded-full flex items-center justify-center group-hover:from-blue-200 group-hover:to-purple-200 transition-all duration-300">
                       {session.user?.image ? (
@@ -230,7 +230,7 @@ export default function Header() {
                           className="w-8 h-8 rounded-full object-cover"
                         />
                       ) : (
-                        <User className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                        <User className="w-4 h-4 text-gray-600" />
                       )}
                     </div>
                     <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors duration-300">
@@ -238,13 +238,13 @@ export default function Header() {
                     </span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 animate-fade-in-up bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none text-gray-900 dark:text-gray-100">
+                      <p className="text-sm font-medium leading-none">
                         {session.user?.name || 'User'}
                       </p>
-                      <p className="text-xs leading-none text-gray-500 dark:text-gray-400">
+                      <p className="text-xs leading-none text-muted-foreground">
                         {session.user?.email}
                       </p>
                     </div>
@@ -255,19 +255,19 @@ export default function Header() {
                   {session.user.role === 'CUSTOMER' && (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/dashboard" className="flex items-center group">
                           <User className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard/orders" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/dashboard/orders" className="flex items-center group">
                           <History className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>Order History</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/cart" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/cart" className="flex items-center group">
                           <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>Shopping Cart</span>
                           {cartCount > 0 && (
@@ -277,7 +277,7 @@ export default function Header() {
                           )}
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem disabled className="text-gray-400 dark:text-gray-500">
+                      <DropdownMenuItem disabled>
                         <Heart className="mr-2 h-4 w-4" />
                         <span>Wishlist</span>
                       </DropdownMenuItem>
@@ -288,19 +288,19 @@ export default function Header() {
                   {(session.user.role === 'ADMIN' || session.user.role === 'SUPER_ADMIN') && (
                     <>
                       <DropdownMenuItem asChild>
-                        <Link href="/admin" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/admin" className="flex items-center group">
                           <Package className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>Admin Dashboard</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard/orders" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/dashboard/orders" className="flex items-center group">
                           <History className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>My Order History</span>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
-                        <Link href="/cart" className="flex items-center group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <Link href="/cart" className="flex items-center group">
                           <ShoppingCart className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                           <span>Shopping Cart</span>
                           {cartCount > 0 && (
@@ -314,12 +314,12 @@ export default function Header() {
                     </>
                   )}
 
-                  <DropdownMenuItem disabled className="text-gray-400 dark:text-gray-500">
+                  <DropdownMenuItem disabled>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="group text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <DropdownMenuItem onClick={handleSignOut} className="group">
                     <LogOut className="mr-2 h-4 w-4 group-hover:scale-110 transition-transform duration-300" />
                     <span>Sign Out</span>
                   </DropdownMenuItem>
@@ -331,7 +331,7 @@ export default function Header() {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="hover:scale-105 transition-transform duration-300 border-gray-300 hover:bg-gray-100 text-gray-700 dark:border-gray-600 dark:hover:bg-gray-800 dark:text-gray-200"
+                    className="hover:scale-105 transition-transform duration-300"
                   >
                     Sign In
                   </Button>
@@ -350,7 +350,7 @@ export default function Header() {
                 <Button 
                   variant="outline" 
                   size="icon" 
-                  className="lg:hidden hover:scale-110 transition-transform duration-300 border-gray-300 hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800 dark:text-gray-200"
+                  className="lg:hidden hover:scale-110 transition-transform duration-300"
                 >
                   <Menu className="w-5 h-5" />
                 </Button>
@@ -389,8 +389,8 @@ export default function Header() {
                   {session ? (
                     <div className="pt-4 border-t space-y-2">
                       <div className="px-3 py-2">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{session.user?.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{session.user?.email}</p>
+                        <p className="text-sm font-medium">{session.user?.name}</p>
+                        <p className="text-xs text-muted-foreground">{session.user?.email}</p>
                       </div>
                       
                       {session.user.role === 'CUSTOMER' && (
@@ -398,7 +398,7 @@ export default function Header() {
                           <Link
                             href="/dashboard"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <User className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             Dashboard
@@ -406,7 +406,7 @@ export default function Header() {
                           <Link
                             href="/dashboard/orders"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <History className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             Order History
@@ -414,7 +414,7 @@ export default function Header() {
                           <Link
                             href="/cart"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <ShoppingCart className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             Shopping Cart
@@ -432,7 +432,7 @@ export default function Header() {
                           <Link
                             href="/admin"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <Package className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             Admin Dashboard
@@ -440,7 +440,7 @@ export default function Header() {
                           <Link
                             href="/dashboard/orders"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <History className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             My Order History
@@ -448,7 +448,7 @@ export default function Header() {
                           <Link
                             href="/cart"
                             onClick={() => setMobileMenuOpen(false)}
-                            className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                            className="flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                           >
                             <ShoppingCart className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                             Shopping Cart
@@ -466,7 +466,7 @@ export default function Header() {
                           setMobileMenuOpen(false);
                           handleSignOut();
                         }}
-                        className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300 group"
+                        className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium transition-all duration-300 group"
                       >
                         <LogOut className="mr-3 h-5 w-5 group-hover:scale-110 transition-transform duration-300" />
                         Sign Out
@@ -477,7 +477,7 @@ export default function Header() {
                       <Link
                         href="/auth/signin"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-300"
+                        className="block px-3 py-2 rounded-md text-base font-medium transition-all duration-300"
                       >
                         Sign In
                       </Link>
