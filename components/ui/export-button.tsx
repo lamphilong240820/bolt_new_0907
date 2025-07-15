@@ -2,47 +2,63 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
+import { exportToCSV, exportAllData } from '@/lib/export';
+import { useToast } from '@/hooks/use-toast';
 
 interface ExportButtonProps {
-  data: any[];
-  formatData: (data: any[]) => {
-    headers: string[];
-    rows: (string | number)[][];
-    filename: string;
-  };
-  loading: boolean;
+  data?: any[];
+  formatData?: (data: any[]) => any;
+  loading?: boolean;
+  type?: 'products' | 'customers' | 'orders';
+  className?: string;
 }
 
-export default function ExportButton({ data, formatData, loading }: ExportButtonProps) {
+export default function ExportButton({ 
+  data = [], 
+  formatData, 
+  loading = false, 
+  type,
+  className = '' 
+}: ExportButtonProps) {
   const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
-  const exportToCSV = async () => {
-    if (data.length === 0) return;
-    
+  const handleExport = async () => {
+    if (loading || exporting) return;
+
     setExporting(true);
     try {
-      const { headers, rows, filename } = formatData(data);
-      
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-      ].join('\n');
+      let exportData;
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
+      // If type is specified, fetch all data from API
+      if (type && exportAllData[type]) {
+        exportData = await exportAllData[type]();
+      } else if (formatData && data.length > 0) {
+        // Use provided data and format function
+        exportData = formatData(data);
+      } else {
+        toast({
+          title: "Export Error",
+          description: "No data available to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      exportToCSV(exportData);
       
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${filename}.csv`);
-      link.style.visibility = 'hidden';
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      toast({
+        title: "Export Successful",
+        description: `${exportData.rows.length} records exported successfully`,
+      });
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setExporting(false);
     }
@@ -50,14 +66,18 @@ export default function ExportButton({ data, formatData, loading }: ExportButton
 
   return (
     <Button
+      onClick={handleExport}
+      disabled={loading || exporting}
       variant="outline"
       size="sm"
-      onClick={exportToCSV}
-      disabled={loading || data.length === 0 || exporting}
-      className="hover:scale-105 transition-transform duration-300"
+      className={`hover:scale-105 transition-transform duration-300 ${className}`}
     >
-      <Download className="w-4 h-4 mr-2" />
-      {exporting ? 'Exporting...' : 'Export CSV'}
+      {exporting ? (
+        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+      ) : (
+        <Download className="w-4 h-4 mr-2" />
+      )}
+      {exporting ? 'Exporting...' : 'Export All CSV'}
     </Button>
   );
 }

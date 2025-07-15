@@ -53,7 +53,6 @@ export default function CustomerOrdersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
@@ -80,15 +79,18 @@ export default function CustomerOrdersPage() {
     }, 300);
 
     return () => clearTimeout(debounceTimer);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, session, status, router]);
 
   useEffect(() => {
-    fetchOrders();
-  }, [session, status, router, pagination.page, pagination.limit]);
+    if (session) {
+      fetchOrders();
+    }
+  }, [pagination.page, pagination.limit, session]);
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
+
   const fetchOrders = async () => {
     if (!session) return;
     
@@ -103,15 +105,19 @@ export default function CustomerOrdersPage() {
       const response = await fetch(`/api/orders?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.orders);
+        setOrders(data.orders || []);
         setPagination(prev => ({
           ...prev,
-          total: data.pagination.total,
-          pages: data.pagination.pages,
+          total: data.pagination?.total || 0,
+          pages: data.pagination?.pages || 0,
         }));
+      } else {
+        console.error('Failed to fetch orders:', response.status);
+        setOrders([]);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
+      setOrders([]);
     } finally {
       setLoading(false);
     }
@@ -148,6 +154,7 @@ export default function CustomerOrdersPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -236,7 +243,7 @@ export default function CustomerOrdersPage() {
           <Link href="/dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Order History
+              Back to Dashboard
             </Button>
           </Link>
           <div className="flex-1">
@@ -343,7 +350,7 @@ export default function CustomerOrdersPage() {
               </CardContent>
             </Card>
           ) : (
-            orders.map((order) => (
+            orders.map((order, index) => (
               <Card key={order.id} className={`overflow-hidden hover-lift transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95'}`} style={{ transitionDelay: `${600 + index * 100}ms` }}>
                 <CardContent className="p-6">
                   {/* Order Header */}

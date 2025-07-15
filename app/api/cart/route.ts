@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
@@ -14,6 +14,20 @@ export async function GET() {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50'); // Default to 50 for cart
+
+    const skip = (page - 1) * limit;
+
+    // Get total count
+    const totalItems = await prisma.cartItem.count({
+      where: {
+        userId: session.user.id,
+      },
+    });
+
+    // Get paginated cart items
     const cartItems = await prisma.cartItem.findMany({
       where: {
         userId: session.user.id,
@@ -25,11 +39,18 @@ export async function GET() {
           },
         },
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      skip,
+      take: limit,
     });
 
     const total = cartItems.reduce((sum, item) => {
       return sum + (Number(item.product.price) * item.quantity);
     }, 0);
+
+    const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
     // Convert Decimal fields to numbers for JSON serialization
     const serializedCartItems = cartItems.map(item => ({
@@ -44,7 +65,14 @@ export async function GET() {
     return NextResponse.json({
       items: serializedCartItems,
       total: Math.round(total * 100) / 100,
-      count: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      count,
+      totalItems,
+      pagination: {
+        page,
+        limit,
+        total: totalItems,
+        pages: Math.ceil(totalItems / limit),
+      },
     });
   } catch (error) {
     console.error('Error fetching cart:', error);

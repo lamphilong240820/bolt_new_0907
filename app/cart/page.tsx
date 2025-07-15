@@ -34,17 +34,35 @@ interface CartData {
 export default function CartPage() {
   const [cart, setCart] = useState<CartData>({ items: [], total: 0, count: 0 });
   const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
 
   useEffect(() => {
     fetchCart();
-  }, []);
+  }, [pagination.page]);
 
   const fetchCart = async () => {
     try {
-      const response = await fetch('/api/cart');
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+      
+      const response = await fetch(`/api/cart?${params}`);
       if (response.ok) {
         const data = await response.json();
         setCart(data);
+        
+        // Update pagination info
+        setPagination(prev => ({
+          ...prev,
+          total: data.totalItems || data.items.length,
+          pages: Math.ceil((data.totalItems || data.items.length) / prev.limit),
+        }));
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -88,6 +106,10 @@ export default function CartPage() {
     } catch (error) {
       console.error('Error removing item:', error);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
   };
 
   if (loading) {
@@ -158,6 +180,35 @@ export default function CartPage() {
                     />
                   ))}
                 </div>
+                
+                {/* Pagination for cart items */}
+                {pagination.pages > 1 && (
+                  <div className="p-6 border-t">
+                    <div className="flex justify-center items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pagination.page === 1}
+                        onClick={() => handlePageChange(pagination.page - 1)}
+                      >
+                        Previous
+                      </Button>
+                      
+                      <span className="text-sm text-gray-600">
+                        Page {pagination.page} of {pagination.pages}
+                      </span>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={pagination.page === pagination.pages}
+                        onClick={() => handlePageChange(pagination.page + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
