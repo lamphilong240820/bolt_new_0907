@@ -51,6 +51,12 @@ export default function CustomerOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -63,19 +69,38 @@ export default function CustomerOrdersPage() {
       return;
     }
 
-    fetchOrders();
-  }, [session, status, router]);
+    const debounceTimer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchOrders();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, statusFilter]);
 
   useEffect(() => {
-    filterOrders();
-  }, [orders, searchTerm, statusFilter]);
+    fetchOrders();
+  }, [session, status, router, pagination.page, pagination.limit]);
 
   const fetchOrders = async () => {
+    if (!session) return;
+    
     try {
-      const response = await fetch('/api/orders');
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter !== 'all') params.append('status', statusFilter.toUpperCase());
+      
+      const response = await fetch(`/api/orders?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        setOrders(data.orders);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination.total,
+          pages: data.pagination.pages,
+        }));
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -84,30 +109,14 @@ export default function CustomerOrdersPage() {
     }
   };
 
-  const filterOrders = () => {
-    let filtered = orders;
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(order =>
-        order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.orderItems.some(item =>
-          item.product.name.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter);
-    }
-
-    setFilteredOrders(filtered);
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
   };
 
   const clearFilters = () => {
     setSearchTerm('');
     setStatusFilter('all');
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   const getStatusColor = (status: string) => {
@@ -249,20 +258,19 @@ export default function CustomerOrdersPage() {
 
         {/* Orders List */}
         <div className="space-y-6">
-          {filteredOrders.length === 0 ? (
+          {orders.length === 0 ? (
             <Card>
               <CardContent className="text-center py-12">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {orders.length === 0 ? 'No orders yet' : 'No orders match your filters'}
+                  No orders found
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {orders.length === 0 
-                    ? 'Start shopping to see your orders here!' 
-                    : 'Try adjusting your search or filter criteria.'
-                  }
+                  {pagination.total === 0 
+                    ? 'Start shopping to see your orders here!'
+                    : 'Try adjusting your search or filter criteria.'}
                 </p>
-                {orders.length === 0 && (
+                {pagination.total === 0 && (
                   <Link href="/products">
                     <Button>Start Shopping</Button>
                   </Link>
@@ -270,7 +278,7 @@ export default function CustomerOrdersPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredOrders.map((order) => (
+            orders.map((order) => (
               <Card key={order.id} className="overflow-hidden">
                 <CardContent className="p-6">
                   {/* Order Header */}
@@ -360,10 +368,61 @@ export default function CustomerOrdersPage() {
           )}
         </div>
 
-        {/* Results Summary */}
-        {filteredOrders.length > 0 && (
-          <div className="mt-8 text-center text-sm text-gray-600">
-            Showing {filteredOrders.length} of {orders.length} orders
+        {/* Pagination */}
+        {pagination.pages > 1 && (
+          <div className="mt-8 flex flex-col items-center space-y-4">
+            <div className="text-sm text-gray-600">
+              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} orders
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page === 1}
+                onClick={() => handlePageChange(pagination.page - 1)}
+              >
+                Previous
+              </Button>
+              
+              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={pageNum === pagination.page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={pagination.page === pagination.pages}
+                onClick={() => handlePageChange(pagination.page + 1)}
+              >
+                Next
+              </Button>
+            </div>
+            
+            <div className="flex items-center space-x-2 text-sm">
+              <span>Items per page:</span>
+              <select
+                value={pagination.limit}
+                onChange={(e) => {
+                  setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                }}
+                className="border border-gray-300 rounded px-2 py-1"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+              </select>
+            </div>
           </div>
         )}
       </div>

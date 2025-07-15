@@ -63,7 +63,11 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [filters, pagination.page]);
+  }, [filters]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [pagination.page]);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -189,39 +193,105 @@ export default function ProductsPage() {
 
             {/* Pagination */}
             {pagination.pages > 1 && (
-              <div className="mt-12 flex justify-center animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    disabled={pagination.page === 1}
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    className="hover:scale-105 transition-transform duration-300"
-                  >
-                    Previous
-                  </Button>
+              <div className="mt-12 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+                <div className="flex flex-col items-center space-y-4">
+                  {/* Page Info */}
+                  <div className="text-sm text-gray-600">
+                    Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+                  </div>
                   
-                  {Array.from({ length: pagination.pages }, (_, i) => i + 1).map(page => (
+                  {/* Pagination Controls */}
+                  <div className="flex items-center space-x-2">
                     <Button
-                      key={page}
-                      className={`w-10 hover:scale-105 transition-transform duration-300 ${
-                        page === pagination.page 
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white' 
-                          : 'border border-gray-300 hover:border-blue-400 hover:bg-blue-50'
-                      }`}
-                      onClick={() => handlePageChange(page)}
+                      variant="outline"
+                      disabled={pagination.page === 1}
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      className="hover:scale-105 transition-transform duration-300"
                     >
-                      {page}
+                      Previous
                     </Button>
-                  ))}
+                    
+                    {/* Page Numbers */}
+                    {(() => {
+                      const currentPage = pagination.page;
+                      const totalPages = pagination.pages;
+                      const delta = 2; // Number of pages to show on each side of current page
+                      
+                      let pages = [];
+                      
+                      // Always show first page
+                      if (currentPage > delta + 1) {
+                        pages.push(1);
+                        if (currentPage > delta + 2) {
+                          pages.push('...');
+                        }
+                      }
+                      
+                      // Show pages around current page
+                      for (let i = Math.max(1, currentPage - delta); i <= Math.min(totalPages, currentPage + delta); i++) {
+                        pages.push(i);
+                      }
+                      
+                      // Always show last page
+                      if (currentPage < totalPages - delta) {
+                        if (currentPage < totalPages - delta - 1) {
+                          pages.push('...');
+                        }
+                        pages.push(totalPages);
+                      }
+                      
+                      return pages.map((page, index) => {
+                        if (page === '...') {
+                          return (
+                            <span key={index} className="px-3 py-2 text-gray-500">
+                              ...
+                            </span>
+                          );
+                        }
+                        
+                        return (
+                          <Button
+                            key={page}
+                            variant={page === currentPage ? "default" : "outline"}
+                            className={`w-10 hover:scale-105 transition-transform duration-300 ${
+                              page === currentPage 
+                                ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white' 
+                                : 'border border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+                            }`}
+                            onClick={() => handlePageChange(page as number)}
+                          >
+                            {page}
+                          </Button>
+                        );
+                      });
+                    })()}
+                    
+                    <Button
+                      variant="outline"
+                      disabled={pagination.page === pagination.pages}
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      className="hover:scale-105 transition-transform duration-300"
+                    >
+                      Next
+                    </Button>
+                  </div>
                   
-                  <Button
-                    variant="outline"
-                    disabled={pagination.page === pagination.pages}
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    className="hover:scale-105 transition-transform duration-300"
-                  >
-                    Next
-                  </Button>
+                  {/* Items per page selector */}
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span className="text-gray-600">Items per page:</span>
+                    <select
+                      value={pagination.limit}
+                      onChange={(e) => {
+                        setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                      }}
+                      className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value={12}>12</option>
+                      <option value={24}>24</option>
+                      <option value={48}>48</option>
+                      <option value={96}>96</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             )}

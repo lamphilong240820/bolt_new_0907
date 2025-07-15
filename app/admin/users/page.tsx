@@ -41,6 +41,12 @@ interface User {
 export default function AdminUsersPage() {
   const { data: session } = useSession();
   const [users, setUsers] = useState<User[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -51,12 +57,24 @@ export default function AdminUsersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchUsers();
+    const debounceTimer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchUsers();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
   }, [searchTerm, roleFilter]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [pagination.page, pagination.limit]);
 
   const fetchUsers = async () => {
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
       if (searchTerm) params.append('search', searchTerm);
       if (roleFilter) params.append('role', roleFilter);
       
@@ -64,6 +82,11 @@ export default function AdminUsersPage() {
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination.total,
+          pages: data.pagination.pages,
+        }));
       } else {
         toast({
           title: "Error",
@@ -183,6 +206,10 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
   const canEditUser = (user: User) => {
     return session?.user?.role === 'SUPER_ADMIN' && user.id !== session.user.id;
   };
@@ -238,7 +265,7 @@ export default function AdminUsersPage() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Users ({users.length})</CardTitle>
+          <CardTitle>Users ({pagination.total})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -320,6 +347,65 @@ export default function AdminUsersPage() {
           {users.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No users found</p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} users
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Previous
+                </Button>
+                
+                {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === pagination.page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm">
+                <span>Items per page:</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => {
+                    setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
             </div>
           )}
         </CardContent>

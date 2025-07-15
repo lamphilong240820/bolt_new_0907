@@ -51,22 +51,50 @@ interface Order {
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchOrders();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [pagination.page, pagination.limit]);
 
   const fetchOrders = async () => {
     try {
-      const response = await fetch('/api/admin/orders');
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+      if (searchTerm) params.append('search', searchTerm);
+      if (statusFilter) params.append('status', statusFilter);
+      
+      const response = await fetch(`/api/admin/orders?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        setOrders(data.orders);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination.total,
+          pages: data.pagination.pages,
+        }));
       } else {
         toast({
           title: "Error",
@@ -121,6 +149,10 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -139,12 +171,6 @@ export default function AdminOrdersPage() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const filteredOrders = orders.filter(order =>
-    order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -170,14 +196,33 @@ export default function AdminOrdersPage() {
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search orders..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="w-full md:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="SHIPPED">Shipped</option>
+                <option value="DELIVERED">Delivered</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -185,7 +230,7 @@ export default function AdminOrdersPage() {
       {/* Orders Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Orders ({filteredOrders.length})</CardTitle>
+          <CardTitle>Orders ({pagination.total})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -200,7 +245,7 @@ export default function AdminOrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => (
+              {orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">
                     {order.orderNumber}
@@ -239,9 +284,67 @@ export default function AdminOrdersPage() {
             </TableBody>
           </Table>
           
-          {filteredOrders.length === 0 && (
+          {orders.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No orders found</p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} orders
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Previous
+                </Button>
+                
+                {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
+                  const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === pagination.page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm">
+                <span>Items per page:</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => {
+                    setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
           )}
         </CardContent>
