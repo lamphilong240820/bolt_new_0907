@@ -290,7 +290,7 @@ export default function OrderConfirmationPage() {
               </Link>
               <Link href="/dashboard" className="block">
                 <Button variant="outline" className="w-full">
-                  Go to Order History
+                  View Order History
                 </Button>
               </Link>
             </div>

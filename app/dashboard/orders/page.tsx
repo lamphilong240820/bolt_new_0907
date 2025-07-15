@@ -240,12 +240,6 @@ export default function CustomerOrdersPage() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className={`flex items-center space-x-4 mb-8 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </Link>
           <div className="flex-1">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">Order History</h1>
           </div>

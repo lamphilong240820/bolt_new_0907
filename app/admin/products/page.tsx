@@ -284,8 +284,7 @@ export default function AdminProductsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Products ({pagination.total})</h1>
         <div className="flex items-center space-x-2">
           <ExportButton 
-            data={products}
-            formatData={formatDataForExport.products}
+            endpoint="products"
             loading={loading}
           />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

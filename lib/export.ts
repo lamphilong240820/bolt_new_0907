@@ -35,11 +35,12 @@ export const exportToCSV = (data: ExportData) => {
 export const exportAllData = {
   products: async () => {
     try {
-      // Fetch all products without pagination
-      const response = await fetch('/api/products?limit=10000'); // Large limit to get all
+      // Fetch all products without pagination by using a very large limit
+      const response = await fetch('/api/products?limit=50000&page=1'); // Increased limit to handle more products
       const data = await response.json();
       
       return {
+        title: 'All Products Export',
         headers: ['Name', 'SKU', 'Category', 'Price', 'Compare Price', 'Stock', 'Status', 'Featured', 'Average Rating', 'Review Count', 'Created Date'],
         rows: data.products.map((product: any) => [
           product.name,
@@ -64,10 +65,11 @@ export const exportAllData = {
   
   customers: async () => {
     try {
-      const response = await fetch('/api/admin/customers?limit=10000');
+      const response = await fetch('/api/admin/customers?limit=50000&page=1');
       const data = await response.json();
       
       return {
+        title: 'All Customers Export',
         headers: ['Name', 'Email', 'Role', 'Total Orders', 'Total Spent', 'Email Verified', 'Join Date'],
         rows: data.map((customer: any) => [
           customer.name || 'N/A',
@@ -88,10 +90,11 @@ export const exportAllData = {
   
   orders: async () => {
     try {
-      const response = await fetch('/api/admin/orders?limit=10000');
+      const response = await fetch('/api/admin/orders?limit=50000&page=1');
       const data = await response.json();
       
       return {
+        title: 'All Orders Export',
         headers: ['Order Number', 'Customer Name', 'Customer Email', 'Items Count', 'Subtotal', 'Tax', 'Shipping', 'Total', 'Status', 'Payment Method', 'Order Date'],
         rows: data.orders.map((order: any) => [
           order.orderNumber,

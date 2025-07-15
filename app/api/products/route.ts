@@ -6,6 +6,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '12');
+    
+    // For export purposes, allow very large limits
+    const maxLimit = limit > 1000 ? limit : Math.min(limit, 1000);
+    const actualLimit = limit > 1000 ? 50000 : limit; // Allow up to 50k for exports
+    
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const sortBy = searchParams.get('sortBy') || 'createdAt';
@@ -14,7 +19,7 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
 
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * actualLimit;
 
     // Build where clause
     const where: any = {
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
           [sortBy]: sortOrder,
         },
         skip,
-        take: limit,
+        take: actualLimit,
       }),
       prisma.product.count({ where }),
     ]);
@@ -86,9 +91,9 @@ export async function GET(request: NextRequest) {
       products: productsWithRatings,
       pagination: {
         page,
-        limit,
+        limit: actualLimit,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / actualLimit),
       },
     });
   } catch (error) {

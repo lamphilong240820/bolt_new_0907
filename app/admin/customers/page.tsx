@@ -124,8 +124,7 @@ export default function AdminCustomersPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
         <ExportButton 
-          data={customers}
-          formatData={formatDataForExport.customers}
+          endpoint="customers"
           loading={loading}
         />
       </div>

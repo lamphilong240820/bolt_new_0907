@@ -14,6 +14,7 @@ export async function GET() {
       );
     }
 
+    // Support pagination for large datasets
     const customers = await prisma.user.findMany({
       where: {
         role: 'CUSTOMER',
@@ -40,6 +41,7 @@ export async function GET() {
       orderBy: {
         createdAt: 'desc',
       },
+      take: 50000, // Allow large exports
     });
 
     return NextResponse.json(customers);

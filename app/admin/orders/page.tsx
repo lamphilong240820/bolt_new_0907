@@ -187,8 +187,7 @@ export default function AdminOrdersPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Orders</h1>
         <ExportButton 
-          data={orders}
-          formatData={formatDataForExport.orders}
+          endpoint="orders"
           loading={loading}
         />
       </div>

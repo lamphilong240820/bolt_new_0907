@@ -17,10 +17,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    
+    // For export purposes, allow very large limits
+    const actualLimit = limit > 1000 ? 50000 : limit;
+    
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
 
-    const skip = (page - 1) * limit;
+    const skip = (page - 1) * actualLimit;
 
     // Build where clause
     const where: any = {};
@@ -63,7 +67,7 @@ export async function GET(request: NextRequest) {
           createdAt: 'desc',
         },
         skip,
-        take: limit,
+        take: actualLimit,
       }),
       prisma.order.count({ where }),
     ]);
@@ -85,9 +89,9 @@ export async function GET(request: NextRequest) {
       orders: serializedOrders,
       pagination: {
         page,
-        limit,
+        limit: actualLimit,
         total,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(total / actualLimit),
       },
     });
   } catch (error) {
