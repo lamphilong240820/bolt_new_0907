@@ -27,53 +27,10 @@ export const exportToCSV = (data: ExportData) => {
   document.body.removeChild(link);
 };
 
-export const exportToPDF = async (data: ExportData) => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    const jsPDF = (await import('jspdf')).default;
-    await import('jspdf-autotable');
-    
-    const doc = new jsPDF();
-    
-    // Add title
-    doc.setFontSize(20);
-    doc.text(data.title, 14, 22);
-    
-    // Add timestamp
-    doc.setFontSize(10);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
-    
-    // Add table
-    (doc as any).autoTable({
-      head: [data.headers],
-      body: data.rows,
-      startY: 40,
-      styles: {
-        fontSize: 8,
-        cellPadding: 3,
-      },
-      headStyles: {
-        fillColor: [59, 130, 246],
-        textColor: 255,
-        fontStyle: 'bold',
-      },
-      alternateRowStyles: {
-        fillColor: [248, 250, 252],
-      },
-    });
-    
-    doc.save(`${data.filename}.pdf`);
-  } catch (error) {
-    console.error('PDF export failed:', error);
-    // Fallback to CSV export
-    exportToCSV(data);
-  }
-};
 
 export const formatDataForExport = {
   products: (products: any[]) => ({
-    headers: ['Name', 'SKU', 'Category', 'Price', 'Stock', 'Status', 'Created'],
+    headers: ['Name', 'SKU', 'Category', 'Price', 'Stock', 'Status', 'Featured', 'Created'],
     rows: products.map(product => [
       product.name,
       product.sku || 'N/A',
@@ -81,35 +38,41 @@ export const formatDataForExport = {
       `$${Number(product.price).toFixed(2)}`,
       product.stock,
       product.status,
+      product.featured ? 'Yes' : 'No',
       new Date(product.createdAt).toLocaleDateString()
     ]),
-    title: 'Products Report',
     filename: `products-${new Date().toISOString().split('T')[0]}`
   }),
   
   customers: (customers: any[]) => ({
-    headers: ['Name', 'Email', 'Orders', 'Total Spent', 'Joined'],
+    headers: ['Name', 'Email', 'Role', 'Orders', 'Total Spent', 'Email Verified', 'Joined'],
     rows: customers.map(customer => [
       customer.name || 'N/A',
       customer.email,
+      customer.role,
       customer._count?.orders || 0,
       `$${(customer.orders?.reduce((sum: number, order: any) => sum + Number(order.total), 0) || 0).toFixed(2)}`,
+      customer.emailVerified ? 'Yes' : 'No',
       new Date(customer.createdAt).toLocaleDateString()
     ]),
-    title: 'Customers Report',
     filename: `customers-${new Date().toISOString().split('T')[0]}`
   }),
   
   orders: (orders: any[]) => ({
-    headers: ['Order Number', 'Customer', 'Total', 'Status', 'Date'],
+    headers: ['Order Number', 'Customer', 'Customer Email', 'Items', 'Subtotal', 'Tax', 'Shipping', 'Total', 'Status', 'Payment Method', 'Date'],
     rows: orders.map(order => [
       order.orderNumber,
       order.user?.name || order.user?.email || 'N/A',
+      order.user?.email || 'N/A',
+      order.orderItems?.length || 0,
+      `$${Number(order.subtotal || 0).toFixed(2)}`,
+      `$${Number(order.tax || 0).toFixed(2)}`,
+      `$${Number(order.shipping || 0).toFixed(2)}`,
       `$${Number(order.total).toFixed(2)}`,
       order.status,
+      order.paymentMethod || 'N/A',
       new Date(order.createdAt).toLocaleDateString()
     ]),
-    title: 'Orders Report',
     filename: `orders-${new Date().toISOString().split('T')[0]}`
   })
 };

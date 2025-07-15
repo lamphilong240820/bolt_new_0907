@@ -88,6 +88,7 @@ export default function ProductGrid({ products, loading, viewMode }: ProductGrid
       setAddingToCart(null);
     }
   };
+
   if (loading) {
     return (
       <div className={`grid ${viewMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'} gap-6`}>
@@ -193,7 +194,10 @@ export default function ProductGrid({ products, loading, viewMode }: ProductGrid
                     <Button variant="outline" size="icon">
                       <Heart className="w-4 h-4" />
                     </Button>
-                    <Button disabled={product.stock === 0}>
+                    <Button 
+                      disabled={product.stock === 0 || addingToCart === product.id}
+                      onClick={() => handleAddToCart(product.id)}
+                    >
                       <ShoppingCart className="w-4 h-4 mr-2" />
                       {addingToCart === product.id ? 'Adding...' : 'Add to Cart'}
                     </Button>

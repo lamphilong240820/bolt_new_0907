@@ -58,6 +58,12 @@ interface Category {
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -78,15 +84,40 @@ export default function AdminProductsPage() {
   });
 
   useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchProducts();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchProducts();
+  }, [pagination.page, pagination.limit]);
+
+  useEffect(() => {
     fetchCategories();
   }, []);
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('/api/products?limit=100');
-      const data = await response.json();
-      setProducts(data.products || []);
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`/api/products?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        setProducts(data.products || []);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination.total,
+          pages: data.pagination.pages,
+        }));
+      }
     } catch (error) {
       console.error('Error fetching products:', error);
       toast({
@@ -99,6 +130,9 @@ export default function AdminProductsPage() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
+  };
   const fetchCategories = async () => {
     try {
       const response = await fetch('/api/categories');
@@ -233,10 +267,6 @@ export default function AdminProductsPage() {
     setFormData(prev => ({ ...prev, images: newImages.length > 0 ? newImages : [''] }));
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -251,14 +281,20 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
+        <h1 className="text-2xl font-bold text-gray-900">Products ({pagination.total})</h1>
+        <div className="flex items-center space-x-2">
+          <ExportButton 
+            data={products}
+            formatData={formatDataForExport.products}
+            loading={loading}
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={resetForm}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
@@ -393,12 +429,8 @@ export default function AdminProductsPage() {
               </DialogFooter>
             </form>
           </DialogContent>
-          <ExportButton 
-            data={products}
-            formatData={formatDataForExport.products}
-            loading={loading}
-          />
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Search */}
@@ -419,7 +451,7 @@ export default function AdminProductsPage() {
       {/* Products Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Products ({filteredProducts.length})</CardTitle>
+          <CardTitle>Products ({pagination.total})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -434,7 +466,7 @@ export default function AdminProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProducts.map((product) => (
+              {products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -493,9 +525,112 @@ export default function AdminProductsPage() {
             </TableBody>
           </Table>
           
-          {filteredProducts.length === 0 && (
+          {products.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No products found</p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Previous
+                </Button>
+                
+                {(() => {
+                  const currentPage = pagination.page;
+                  const totalPages = pagination.pages;
+                  const maxVisible = 3;
+                  
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                  
+                  if (endPage - startPage + 1 < maxVisible) {
+                    startPage = Math.max(1, endPage - maxVisible + 1);
+                  }
+                  
+                  const pages = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i);
+                  }
+                  
+                  return (
+                    <>
+                      {startPage > 1 && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(1)}
+                          >
+                            1
+                          </Button>
+                          {startPage > 2 && <span className="text-gray-500">...</span>}
+                        </>
+                      )}
+                      
+                      {pages.map(pageNum => (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                      
+                      {endPage < totalPages && (
+                        <>
+                          {endPage < totalPages - 1 && <span className="text-gray-500">...</span>}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(totalPages)}
+                          >
+                            {totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm">
+                <span>Items per page:</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => {
+                    setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
             </div>
           )}
         </CardContent>

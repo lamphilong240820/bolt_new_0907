@@ -21,7 +21,10 @@ import {
   Calendar,
   Filter,
   X,
-  ShoppingBag
+  ShoppingBag,
+  Grid,
+  List,
+  Download
 } from 'lucide-react';
 
 interface Order {
@@ -60,6 +63,8 @@ export default function CustomerOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -81,6 +86,9 @@ export default function CustomerOrdersPage() {
     fetchOrders();
   }, [session, status, router, pagination.page, pagination.limit]);
 
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
   const fetchOrders = async () => {
     if (!session) return;
     
@@ -119,6 +127,27 @@ export default function CustomerOrdersPage() {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  const exportToCSV = () => {
+    const csvData = [
+      ['Order Number', 'Status', 'Total', 'Items', 'Date'],
+      ...orders.map(order => [
+        order.orderNumber,
+        order.status,
+        `$${order.total.toFixed(2)}`,
+        order.orderItems.length.toString(),
+        new Date(order.createdAt).toLocaleDateString()
+      ])
+    ];
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -173,7 +202,7 @@ export default function CustomerOrdersPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="container mx-auto px-4 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-8" />
@@ -194,10 +223,16 @@ export default function CustomerOrdersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full opacity-30 animate-float" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-100 to-orange-100 rounded-full opacity-30 animate-float" style={{ animationDelay: '2s' }} />
+      </div>
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center space-x-4 mb-8">
+        <div className={`flex items-center space-x-4 mb-8 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`}>
           <Link href="/dashboard">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -205,20 +240,32 @@ export default function CustomerOrdersPage() {
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold text-gray-900">Order History</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-purple-900 bg-clip-text text-transparent">Order History</h1>
           </div>
-          <Link href="/">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <ShoppingBag className="w-4 h-4 mr-2" />
-              Continue Shopping
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToCSV}
+              disabled={orders.length === 0}
+              className="hover:scale-105 transition-transform duration-300"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
             </Button>
-          </Link>
+            <Link href="/">
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 transition-all duration-300">
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Continue Shopping
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
-        <Card className="mb-6">
+        <Card className={`mb-6 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`} style={{ transitionDelay: '200ms' }}>
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -230,7 +277,7 @@ export default function CustomerOrdersPage() {
                   />
                 </div>
               </div>
-              <div className="w-full md:w-48">
+              <div className="w-full lg:w-48">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
@@ -246,6 +293,24 @@ export default function CustomerOrdersPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                  className="hover:scale-105 transition-transform duration-300"
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                  className="hover:scale-105 transition-transform duration-300"
+                >
+                  <Grid className="w-4 h-4" />
+                </Button>
+              </div>
               {(searchTerm || statusFilter !== 'all') && (
                 <Button variant="outline" onClick={clearFilters}>
                   <Filter className="w-4 h-4 mr-2" />
@@ -257,9 +322,9 @@ export default function CustomerOrdersPage() {
         </Card>
 
         {/* Orders List */}
-        <div className="space-y-6">
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6' : 'space-y-6'}>
           {orders.length === 0 ? (
-            <Card>
+            <Card className={`${viewMode === 'grid' ? 'col-span-full' : ''} transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`} style={{ transitionDelay: '400ms' }}>
               <CardContent className="text-center py-12">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -279,7 +344,7 @@ export default function CustomerOrdersPage() {
             </Card>
           ) : (
             orders.map((order) => (
-              <Card key={order.id} className="overflow-hidden">
+              <Card key={order.id} className={`overflow-hidden hover-lift transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-8 opacity-0 scale-95'}`} style={{ transitionDelay: `${600 + index * 100}ms` }}>
                 <CardContent className="p-6">
                   {/* Order Header */}
                   <div className="flex items-center justify-between mb-4">
@@ -320,26 +385,26 @@ export default function CustomerOrdersPage() {
                   )}
 
                   {/* Order Items */}
-                  <div className="space-y-3 mb-4">
+                  <div className={`${viewMode === 'grid' ? 'space-y-2' : 'space-y-3'} mb-4`}>
                     {order.orderItems.map((item) => (
-                      <div key={item.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                      <div key={item.id} className={`flex items-center space-x-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-300 ${viewMode === 'grid' ? 'text-sm' : ''}`}>
                         <img
                           src={item.product.images[0] || '/placeholder-product.jpg'}
                           alt={item.product.name}
-                          className="w-16 h-16 object-cover rounded border"
+                          className={`${viewMode === 'grid' ? 'w-12 h-12' : 'w-16 h-16'} object-cover rounded border`}
                         />
                         <div className="flex-1">
                           <Link href={`/products/${item.product.slug}`}>
-                            <h4 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                            <h4 className={`font-medium text-gray-900 hover:text-blue-600 transition-colors ${viewMode === 'grid' ? 'text-sm line-clamp-1' : ''}`}>
                               {item.product.name}
                             </h4>
                           </Link>
-                          <p className="text-sm text-gray-600">
+                          <p className={`text-gray-600 ${viewMode === 'grid' ? 'text-xs' : 'text-sm'}`}>
                             Quantity: {item.quantity} × ${item.price.toFixed(2)}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900">
+                          <p className={`font-semibold text-gray-900 ${viewMode === 'grid' ? 'text-sm' : ''}`}>
                             ${(item.quantity * item.price).toFixed(2)}
                           </p>
                         </div>
@@ -350,12 +415,14 @@ export default function CustomerOrdersPage() {
                   {/* Order Summary */}
                   <div className="border-t pt-4">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600">
+                      <div className={`text-gray-600 ${viewMode === 'grid' ? 'text-xs' : 'text-sm'}`}>
                         <p>{order.orderItems.length} item{order.orderItems.length !== 1 ? 's' : ''}</p>
-                        <p>Subtotal: ${order.subtotal.toFixed(2)} • Tax: ${order.tax.toFixed(2)} • Shipping: ${order.shipping.toFixed(2)}</p>
+                        {viewMode === 'list' && (
+                          <p>Subtotal: ${order.subtotal.toFixed(2)} • Tax: ${order.tax.toFixed(2)} • Shipping: ${order.shipping.toFixed(2)}</p>
+                        )}
                       </div>
                       <Link href={`/order-confirmation/${order.id}`}>
-                        <Button variant="outline">
+                        <Button variant="outline" size={viewMode === 'grid' ? 'sm' : 'default'} className="hover:scale-105 transition-transform duration-300">
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </Button>
@@ -370,7 +437,7 @@ export default function CustomerOrdersPage() {
 
         {/* Pagination */}
         {pagination.pages > 1 && (
-          <div className="mt-8 flex flex-col items-center space-y-4">
+          <div className={`mt-8 flex flex-col items-center space-y-4 transform transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'}`} style={{ transitionDelay: '800ms' }}>
             <div className="text-sm text-gray-600">
               Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} orders
             </div>
@@ -381,29 +448,83 @@ export default function CustomerOrdersPage() {
                 size="sm"
                 disabled={pagination.page === 1}
                 onClick={() => handlePageChange(pagination.page - 1)}
+                className="hover:scale-105 transition-transform duration-300"
               >
                 Previous
               </Button>
               
-              {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i;
+              {(() => {
+                const currentPage = pagination.page;
+                const totalPages = pagination.pages;
+                const maxVisible = 3;
+                
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                
+                if (endPage - startPage + 1 < maxVisible) {
+                  startPage = Math.max(1, endPage - maxVisible + 1);
+                }
+                
+                const pages = [];
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(i);
+                }
+                
                 return (
-                  <Button
-                    key={pageNum}
-                    variant={pageNum === pagination.page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(pageNum)}
-                  >
-                    {pageNum}
-                  </Button>
+                  <>
+                    {startPage > 1 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(1)}
+                          className="hover:scale-105 transition-transform duration-300"
+                        >
+                          1
+                        </Button>
+                        {startPage > 2 && <span className="text-gray-500">...</span>}
+                      </>
+                    )}
+                    
+                    {pages.map(pageNum => (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === currentPage ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`hover:scale-105 transition-transform duration-300 ${
+                          pageNum === currentPage 
+                            ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700' 
+                            : ''
+                        }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+                    
+                    {endPage < totalPages && (
+                      <>
+                        {endPage < totalPages - 1 && <span className="text-gray-500">...</span>}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePageChange(totalPages)}
+                          className="hover:scale-105 transition-transform duration-300"
+                        >
+                          {totalPages}
+                        </Button>
+                      </>
+                    )}
+                  </>
                 );
-              })}
+              })()}
               
               <Button
                 variant="outline"
                 size="sm"
                 disabled={pagination.page === pagination.pages}
                 onClick={() => handlePageChange(pagination.page + 1)}
+                className="hover:scale-105 transition-transform duration-300"
               >
                 Next
               </Button>
@@ -416,7 +537,7 @@ export default function CustomerOrdersPage() {
                 onChange={(e) => {
                   setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
                 }}
-                className="border border-gray-300 rounded px-2 py-1"
+                className="border border-gray-300 rounded px-2 py-1 hover:border-blue-400 transition-colors duration-300"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>

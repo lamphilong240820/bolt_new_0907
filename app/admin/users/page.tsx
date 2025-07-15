@@ -367,19 +367,64 @@ export default function AdminUsersPage() {
                   Previous
                 </Button>
                 
-                {Array.from({ length: Math.min(5, pagination.pages) }, (_, i) => {
-                  const pageNum = Math.max(1, Math.min(pagination.pages - 4, pagination.page - 2)) + i;
+                {(() => {
+                  const currentPage = pagination.page;
+                  const totalPages = pagination.pages;
+                  const maxVisible = 3;
+                  
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                  
+                  if (endPage - startPage + 1 < maxVisible) {
+                    startPage = Math.max(1, endPage - maxVisible + 1);
+                  }
+                  
+                  const pages = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i);
+                  }
+                  
                   return (
-                    <Button
-                      key={pageNum}
-                      variant={pageNum === pagination.page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(pageNum)}
-                    >
-                      {pageNum}
-                    </Button>
+                    <>
+                      {startPage > 1 && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(1)}
+                          >
+                            1
+                          </Button>
+                          {startPage > 2 && <span className="text-gray-500">...</span>}
+                        </>
+                      )}
+                      
+                      {pages.map(pageNum => (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                      
+                      {endPage < totalPages && (
+                        <>
+                          {endPage < totalPages - 1 && <span className="text-gray-500">...</span>}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(totalPages)}
+                          >
+                            {totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </>
                   );
-                })}
+                })()}
                 
                 <Button
                   variant="outline"
