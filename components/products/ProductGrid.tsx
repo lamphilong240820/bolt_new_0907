@@ -220,7 +220,7 @@ export default function ProductGrid({ products, loading, viewMode }: ProductGrid
               />
             </Link>
             
-            className="absolute top-3 right-3 w-8 h-8 bg-white/90 hover:bg-white text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all border border-gray-200 shadow-sm"
+            {product.comparePrice && (
               <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600 text-white border-0">
                 {Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)}% OFF
               </Badge>
