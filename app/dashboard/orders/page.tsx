@@ -105,11 +105,11 @@ export default function CustomerOrdersPage() {
       const response = await fetch(`/api/orders?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.orders || data || []);
+        setOrders(data.orders || []);
         setPagination(prev => ({
           ...prev,
-          total: data.pagination?.total || data.length || 0,
-          pages: data.pagination?.pages || Math.ceil((data.length || 0) / prev.limit) || 0,
+          total: data.pagination?.total || 0,
+          pages: data.pagination?.pages || 0,
         }));
       } else {
         console.error('Failed to fetch orders:', response.status);
@@ -125,6 +125,7 @@ export default function CustomerOrdersPage() {
 
   const handlePageChange = (page: number) => {
     setPagination(prev => ({ ...prev, page }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const clearFilters = () => {
