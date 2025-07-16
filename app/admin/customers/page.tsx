@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Eye, Mail, Calendar } from 'lucide-react';
+import { Search, Eye, Mail, Calendar, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Customer {
@@ -44,29 +44,49 @@ interface Customer {
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    pages: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 }));
+      fetchCustomers();
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     fetchCustomers();
-  }, []);
+  }, [pagination.page, pagination.limit]);
 
   const fetchCustomers = async () => {
     try {
-      const response = await fetch('/api/admin/customers');
+      const params = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`/api/admin/customers?${params}`);
       if (response.ok) {
         const data = await response.json();
-        // Handle both array and object responses
-        if (Array.isArray(data)) {
-          setCustomers(data);
-        } else if (data.customers && Array.isArray(data.customers)) {
-          setCustomers(data.customers);
-        } else {
-          setCustomers([]);
-        }
+        setCustomers(data.customers || []);
+        setPagination(prev => ({
+          ...prev,
+          total: data.pagination?.total || 0,
+          pages: data.pagination?.pages || 0,
+        }));
       } else {
         toast({
           title: "Error",
@@ -84,6 +104,77 @@ export default function AdminCustomersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportAllCustomers = async () => {
+    setExporting(true);
+    try {
+      let allCustomers: Customer[] = [];
+      let page = 1;
+      let hasMore = true;
+      const limit = 100; // Reasonable batch size
+      
+      while (hasMore) {
+        const response = await fetch(`/api/admin/customers?page=${page}&limit=${limit}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch customers: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        if (data.customers && data.customers.length > 0) {
+          allCustomers = [...allCustomers, ...data.customers];
+          hasMore = data.pagination.page < data.pagination.pages;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+      
+      // Create CSV content
+      const csvData = [
+        ['Name', 'Email', 'Role', 'Total Orders', 'Total Spent', 'Join Date'],
+        ...allCustomers.map(customer => [
+          customer.name || 'No name',
+          customer.email,
+          customer.role,
+          customer._count.orders.toString(),
+          `$${calculateTotalSpent(customer.orders).toFixed(2)}`,
+          new Date(customer.createdAt).toLocaleDateString()
+        ])
+      ];
+
+      const csvContent = csvData.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `all-customers-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: `Exported ${allCustomers.length} customers to CSV`,
+      });
+    } catch (error) {
+      console.error('Error exporting customers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to export customers",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, page }));
   };
 
   const getStatusColor = (status: string) => {
@@ -105,11 +196,6 @@ export default function AdminCustomersPage() {
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   const calculateTotalSpent = (orders: Customer['orders']) => {
     if (!orders || !Array.isArray(orders)) return 0;
     return orders.reduce((total, order) => total + order.total, 0);
@@ -128,31 +214,14 @@ export default function AdminCustomersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Customers ({pagination.total})</h1>
         <Button
-          onClick={() => {
-            const csvData = [
-              ['Name', 'Email', 'Orders', 'Total Spent', 'Joined'],
-              ...filteredCustomers.map(customer => [
-                customer.name || 'No name',
-                customer.email,
-                customer._count.orders.toString(),
-                `$${calculateTotalSpent(customer.orders).toFixed(2)}`,
-                new Date(customer.createdAt).toLocaleDateString()
-              ])
-            ];
-            const csvContent = csvData.map(row => row.join(',')).join('\n');
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `customers-${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-          }}
-          disabled={loading || filteredCustomers.length === 0}
+          onClick={exportAllCustomers}
+          disabled={exporting || pagination.total === 0}
+          className="flex items-center space-x-2"
         >
-          Export CSV
+          <Download className="w-4 h-4" />
+          <span>{exporting ? 'Exporting...' : 'Export All CSV'}</span>
         </Button>
       </div>
 
@@ -174,7 +243,7 @@ export default function AdminCustomersPage() {
       {/* Customers Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Customers ({filteredCustomers.length})</CardTitle>
+          <CardTitle>Customers ({pagination.total})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -188,7 +257,7 @@ export default function AdminCustomersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCustomers.map((customer) => (
+              {customers.map((customer) => (
                 <TableRow key={customer.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">
@@ -233,9 +302,113 @@ export default function AdminCustomersPage() {
             </TableBody>
           </Table>
           
-          {filteredCustomers.length === 0 && (
+          {customers.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500">No customers found</p>
+            </div>
+          )}
+          
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="mt-6 flex flex-col items-center space-y-4">
+              <div className="text-sm text-gray-600">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} customers
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === 1}
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                >
+                  Previous
+                </Button>
+                
+                {(() => {
+                  const currentPage = pagination.page;
+                  const totalPages = pagination.pages;
+                  const maxVisible = 3;
+                  
+                  let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                  let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                  
+                  if (endPage - startPage + 1 < maxVisible) {
+                    startPage = Math.max(1, endPage - maxVisible + 1);
+                  }
+                  
+                  const pages = [];
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i);
+                  }
+                  
+                  return (
+                    <>
+                      {startPage > 1 && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(1)}
+                          >
+                            1
+                          </Button>
+                          {startPage > 2 && <span className="text-gray-500">...</span>}
+                        </>
+                      )}
+                      
+                      {pages.map(pageNum => (
+                        <Button
+                          key={pageNum}
+                          variant={pageNum === currentPage ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                      
+                      {endPage < totalPages && (
+                        <>
+                          {endPage < totalPages - 1 && <span className="text-gray-500">...</span>}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(totalPages)}
+                          >
+                            {totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page === pagination.pages}
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+              
+              <div className="flex items-center space-x-2 text-sm">
+                <span>Items per page:</span>
+                <select
+                  value={pagination.limit}
+                  onChange={(e) => {
+                    setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
             </div>
           )}
         </CardContent>
@@ -285,7 +458,7 @@ export default function AdminCustomersPage() {
               {/* Order History */}
               <div>
                 <h3 className="font-semibold mb-4">Order History</h3>
-                {selectedCustomer.orders.length > 0 ? (
+                {selectedCustomer.orders && selectedCustomer.orders.length > 0 ? (
                   <div className="space-y-2">
                     {selectedCustomer.orders.map((order) => (
                       <div key={order.id} className="flex items-center justify-between p-3 border rounded">
