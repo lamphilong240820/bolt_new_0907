@@ -18,19 +18,12 @@ export async function GET() {
       where: {
         role: 'CUSTOMER',
       },
-      include: {
-        orders: {
-          select: {
-            id: true,
-            orderNumber: true,
-            total: true,
-            status: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        createdAt: true,
         _count: {
           select: {
             orders: true,
@@ -42,19 +35,11 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({
-      customers,
-      pagination: {
-        page: 1,
-        limit: customers.length,
-        total: customers.length,
-        pages: 1,
-      },
-    });
+    return NextResponse.json(customers);
   } catch (error) {
     console.error('Error fetching customers:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch customers' },
+      [],
       { status: 500 }
     );
   }

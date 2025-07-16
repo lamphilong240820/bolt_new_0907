@@ -23,7 +23,7 @@ const navigation = [
   { name: 'Products', href: '/admin/products', icon: Package },
   { name: 'Orders', href: '/admin/orders', icon: ShoppingCart },
   { name: 'Customers', href: '/admin/customers', icon: Users },
-  { name: 'User Management', href: '/admin/users', icon: Users },
+  { name: 'User Management', href: '/admin/users', icon: Lock },
 ];
 
 const disabledNavigation = [

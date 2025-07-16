@@ -23,8 +23,6 @@ import {
 } from '@/components/ui/dialog';
 import { Search, Eye, Mail, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import ExportButton from '@/components/ui/export-button';
-import { formatDataForExport } from '@/lib/export';
 
 interface Customer {
   id: string;
@@ -32,16 +30,16 @@ interface Customer {
   email: string;
   role: string;
   createdAt: string;
-  orders: Array<{
+  _count: {
+    orders: number;
+  };
+  orders?: Array<{
     id: string;
     orderNumber: string;
     total: number;
     status: string;
     createdAt: string;
   }>;
-  _count: {
-    orders: number;
-  };
 }
 
 export default function AdminCustomersPage() {
@@ -61,7 +59,14 @@ export default function AdminCustomersPage() {
       const response = await fetch('/api/admin/customers');
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data.customers || data);
+        // Handle both array and object responses
+        if (Array.isArray(data)) {
+          setCustomers(data);
+        } else if (data.customers && Array.isArray(data.customers)) {
+          setCustomers(data.customers);
+        } else {
+          setCustomers([]);
+        }
       } else {
         toast({
           title: "Error",
@@ -106,6 +111,7 @@ export default function AdminCustomersPage() {
   );
 
   const calculateTotalSpent = (orders: Customer['orders']) => {
+    if (!orders || !Array.isArray(orders)) return 0;
     return orders.reduce((total, order) => total + order.total, 0);
   };
 
@@ -123,13 +129,31 @@ export default function AdminCustomersPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-        <ExportButton 
-          data={customers}
-          formatData={formatDataForExport.customers}
-          loading={loading}
-          exportAll={true}
-          exportType="customers"
-        />
+        <Button
+          onClick={() => {
+            const csvData = [
+              ['Name', 'Email', 'Orders', 'Total Spent', 'Joined'],
+              ...filteredCustomers.map(customer => [
+                customer.name || 'No name',
+                customer.email,
+                customer._count.orders.toString(),
+                `$${calculateTotalSpent(customer.orders).toFixed(2)}`,
+                new Date(customer.createdAt).toLocaleDateString()
+              ])
+            ];
+            const csvContent = csvData.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `customers-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+          }}
+          disabled={loading || filteredCustomers.length === 0}
+        >
+          Export CSV
+        </Button>
       </div>
 
       {/* Search */}
