@@ -55,7 +55,7 @@ export default function CustomerOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 5,
     total: 0,
     pages: 0,
   });
@@ -73,12 +73,7 @@ export default function CustomerOrdersPage() {
       return;
     }
 
-    const debounceTimer = setTimeout(() => {
-      setPagination(prev => ({ ...prev, page: 1 }));
-      fetchOrders();
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
+    fetchOrders();
   }, [searchTerm, statusFilter, session, status, router]);
 
   useEffect(() => {
@@ -87,6 +82,18 @@ export default function CustomerOrdersPage() {
     }
   }, [pagination.page, pagination.limit, session]);
 
+  // Debounce search and filter changes
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (session) {
+        setPagination(prev => ({ ...prev, page: 1 }));
+        fetchOrders();
+      }
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchTerm, statusFilter]);
+
   useEffect(() => {
     setIsVisible(true);
   }, []);
@@ -94,6 +101,7 @@ export default function CustomerOrdersPage() {
   const fetchOrders = async () => {
     if (!session) return;
     
+    setLoading(true);
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -114,18 +122,29 @@ export default function CustomerOrdersPage() {
       } else {
         console.error('Failed to fetch orders:', response.status);
         setOrders([]);
+        setPagination(prev => ({ ...prev, total: 0, pages: 0 }));
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
       setOrders([]);
+      setPagination(prev => ({ ...prev, total: 0, pages: 0 }));
     } finally {
       setLoading(false);
     }
   };
 
   const handlePageChange = (page: number) => {
+    if (page < 1 || page > pagination.pages) return;
     setPagination(prev => ({ ...prev, page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setPagination(prev => ({ 
+      ...prev, 
+      limit: newLimit, 
+      page: 1 
+    }));
   };
 
   const clearFilters = () => {
@@ -537,13 +556,14 @@ export default function CustomerOrdersPage() {
               <select
                 value={pagination.limit}
                 onChange={(e) => {
-                  setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }));
+                  handleLimitChange(parseInt(e.target.value));
                 }}
                 className="border border-gray-300 rounded px-2 py-1 hover:border-blue-400 transition-colors duration-300"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
+                <option value={50}>50</option>
               </select>
             </div>
           </div>

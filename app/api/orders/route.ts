@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 100); // Cap at 100 items per page
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
 
-    const skip = (page - 1) * limit;
+    const skip = Math.max(0, (page - 1) * limit);
 
     // Build where clause
     const where: any = {
@@ -85,19 +85,25 @@ export async function GET(request: NextRequest) {
       }))
     }));
 
+    const totalPages = Math.ceil(total / limit);
+    
     return NextResponse.json({
       orders: serializedOrders || [],
       pagination: {
-        page,
+        page: Math.min(page, Math.max(1, totalPages)), // Ensure page is within valid range
         limit,
         total,
-        pages: Math.ceil(total / limit),
+        pages: totalPages,
       },
     });
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch orders' },
+      { 
+        error: 'Failed to fetch orders',
+        orders: [],
+        pagination: { page: 1, limit: 10, total: 0, pages: 0 }
+      },
       { status: 500 }
     );
   }
