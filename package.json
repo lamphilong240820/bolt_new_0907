@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed-bulk": "tsx scripts/seed-bulk-data.ts",
+    "db:update-images": "tsx scripts/update-product-images.ts",
     "db:studio": "prisma studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
